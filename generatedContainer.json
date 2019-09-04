@@ -1,0 +1,71 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "variables": {
+        "location": "canadaeast",
+        "environment": "DEV",
+        "name": "jonsProject",
+        "webAppPortalName": "[concat(variables('name'), '-', variables('environment'),  '-', 'webapp')]",
+        "hostingPlanName": "[concat(variables('name'), '-', variables('environment'),  '-', 'hosting')]",
+        "dockerRegistryUrl": "https://_MY_REGISTRY_USERNAME_.azurecr.io",
+        "dockerRegistryUsername": "testadmin",
+        "dockerImageName": "_MY_REGISTRY_USERNAME_.azurecr.io/_MY_NAMESPACE_/_MY_DOCKER_IMAGE_NAME_:_TAG_",
+        "dockerRegistryPassword": "Password01",
+        "appServiceSku": "B1",
+        "subscriptionId": "{subscription-id}"
+    },
+    "resources": [
+        {
+            "apiVersion": "2018-11-01",
+            "name": "[variables('webAppPortalName')]",
+            "type": "Microsoft.Web/sites",
+            "location": "[variables('location')]",
+            "tags": {}, 
+            "dependsOn": [
+                "[concat('Microsoft.Web/serverfarms/', variables('hostingPlanName'))]"
+            ],
+            "properties": {
+                "name": "[variables('webAppPortalName')]",
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "DOCKER_REGISTRY_SERVER_URL",
+                            "value": "[variables('dockerRegistryUrl')]"
+                        },
+                        {
+                            "name": "DOCKER_REGISTRY_SERVER_USERNAME",
+                            "value": "[variables('dockerRegistryUsername')]"
+                        },
+                        {
+                            "name": "DOCKER_REGISTRY_SERVER_PASSWORD",
+                            "value": "[variables('dockerRegistryPassword')]"
+                        },
+                        {
+                            "name": "WEBSITES_ENABLE_APP_SERVICE_STORAGE",
+                            "value": "false"
+                        }
+                    ],
+                    "linuxFxVersion": "[concat('DOCKER|', variables('dockerImageName'))]",
+                    "alwaysOn": "[concat('alwaysOn')]"
+                },
+                "serverFarmId": "[concat('/subscriptions/', variables('subscriptionId'),'/resourcegroups/', resourceGroup().name, '/providers/Microsoft.Web/serverfarms/', variables('hostingPlanName'))]",
+                "clientAffinityEnabled": false
+            }
+        },
+        {
+            "apiVersion": "2018-11-01",
+            "name": "[variables('hostingPlanName')]",
+            "type": "Microsoft.Web/serverfarms",
+            "location": "[variables('location')]",
+            "kind": "linux",
+            "tags": {},
+            "dependsOn": [],
+            "properties": {
+                "name": "[variables('hostingPlanName')]"
+            },
+            "sku": {
+                "name": "[variables('appServiceSku')]"
+            }
+        }
+    ]
+}

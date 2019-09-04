@@ -1,0 +1,125 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "sasToken": {
+            "type": "string",
+            "defaultValue": " ",
+            "metadata": {
+                "description": "Sas token to be appended to DeployPackageURI."
+            }
+        },
+        "webAppSvcPlanName": {
+            "type": "string",
+            "defaultValue": " ",
+            "metadata": {}
+        },
+        "webAppSvcPlanSku": {
+            "type": "string",
+            "defaultValue": "Free",
+            "metadata": {}
+        },
+        "webAppName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {}
+        },
+        "webAppName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {}
+        }
+    },
+    "variables": {
+        "storageAccountName": "testimgstorageaccnt",
+        "storageAccountId": "[concat(resourceGroup().id,'/providers/Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+        "deployPackageUri": "https://github.com/Azure-Samples/storage-blob-upload-from-webapp",
+        "location": "[resourceGroup().location]",
+        "packageURI": "[variables('DeployPackageURI')]"
+    },
+    "resources": [
+        {
+            "name": "[parameters('WebAppSvcPlanName')]",
+            "type": "Microsoft.Web/serverfarms",
+            "location": "[variables('location')]",
+            "apiVersion": "2014-06-01",
+            "dependsOn": [],
+            "tags": {
+                "displayName": "AppSvcPlan"
+            },
+            "properties": {
+                "name": "[parameters('WebAppSvcPlanName')]",
+                "sku": "[parameters('WebAppSvcPlanSKU')]"
+            }
+        },
+        {
+            "name": "[parameters('WebAppName')]",
+            "type": "Microsoft.Web/sites",
+            "location": "[variables('location')]",
+            "apiVersion": "2015-08-01",
+            "dependsOn": [
+                "[concat('Microsoft.Web/serverfarms/', parameters('WebAppSvcPlanName'))]"
+            ],
+            "tags": {
+                "[concat('hidden-related:', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/', parameters('WebAppSvcPlanName'))]": "Resource",
+                "displayName": "WebApp"
+            },
+            "properties": {
+                "name": "[parameters('WebAppName')]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', parameters('WebAppSvcPlanName'))]"
+            },
+            "resources": [
+                {
+                    "apiVersion": "2015-08-01",
+                    "name": "web",
+                    "type": "config",
+                    "dependsOn": [
+                        "[concat('Microsoft.Web/sites/', variables('WebAppName'))]"
+                    ],
+                    "tags": {
+                        "displayName": "WebAppConfig"
+                    },
+                    "properties": {
+                        "netFrameworkVersion": "v4.6",
+                        "webSocketsEnabled": true,
+                        "alwaysOn": false,
+                        "remoteDebuggingEnabled": false
+                    }
+                },
+                {
+                    "name": "MSDeploy",
+                    "type": "extensions",
+                    "location": "[variables('location')]",
+                    "apiVersion": "2015-08-01",
+                    "dependsOn": [
+                        "[concat('Microsoft.Web/sites/', variables('WebAppName'))]"
+                    ],
+                    "tags": {
+                        "displayName": "WebAppMSDeploy"
+                    },
+                    "properties": {
+                        "packageUri": "[variables('packageURI')]"
+                    }
+                },
+                {
+                    "name": "connectionstrings",
+                    "type": "config",
+                    "apiVersion": "2015-08-01",
+                    "dependsOn": [
+                        "[concat('Microsoft.Web/sites/', variables('WebAppName'))]"
+                    ],
+                    "tags": {
+                        "displayName": "WebAppConnectionStrings"
+                    },
+                    "properties": {
+                        "BlobConnection": {
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',concat(listKeys(variables('storageAccountId'),'2015-05-01-preview').key1))]",
+                            "type": "Custom"
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "outputs": {}
+}
